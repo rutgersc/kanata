@@ -1103,7 +1103,7 @@ impl Kanata {
         log::trace!("{cur_keys:?}");
         for k in cur_keys.iter() {
             if self.prev_keys.contains(k) {
-                log::trace!("{k:?} is old press");
+                // log::trace!("{k:?} is old press");
                 continue;
             }
             // Note - keyberon can return duplicates of a key in the keycodes()
