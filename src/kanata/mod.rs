@@ -913,6 +913,25 @@ impl Kanata {
         })
     }
 
+    fn hack_windows_alt_menus_insert_ctrl_matches(unmodded_mods: UnmodMods, k: &KeyCode, cur_keys: &Vec<KeyCode>) -> bool {
+        matches!(k, KeyCode::LAlt | KeyCode::RAlt)
+            && matches!(unmodded_mods,  UnmodMods::LAlt | UnmodMods::RAlt)
+            && !cur_keys.contains(&KeyCode::LCtrl)
+    }
+
+    fn hack_windows_alt_menus_insert_ctrl_between_unmod_and_keypress(unmodded_mods: UnmodMods, kb: &mut KbdOut, k: &KeyCode, cur_keys: &Vec<KeyCode>) -> Result<()> {
+        if Self::hack_windows_alt_menus_insert_ctrl_matches(unmodded_mods, k, cur_keys) {
+            let c:OsCode = KeyCode::LCtrl.into();
+            if let Err(e) = press_key(kb, c) { bail!("failed to press key: {:?}", e); }
+            if let Err(e) = release_key(kb, c) { bail!("failed to release key: {:?}", e); };
+            log::debug!("key press {:?}", c);
+            log::debug!("key release {:?}", c);
+        }
+
+        return Ok(());
+    }
+
+
     /// Sends OS key events according to the change in key state between the current and the
     /// previous keyberon keystate. Also processes any custom actions.
     ///
@@ -1045,6 +1064,8 @@ impl Kanata {
             if let Err(e) = release_key(&mut self.kbd_out, k.into()) {
                 bail!("failed to release key: {:?}", e);
             }
+
+            Self::hack_windows_alt_menus_insert_ctrl_between_unmod_and_keypress(self.unmodded_mods, &mut self.kbd_out, k, &cur_keys)?;
         }
 
         if cur_keys.is_empty() && !self.prev_keys.is_empty() {
@@ -1112,8 +1133,25 @@ impl Kanata {
                 )?;
             } else {
                 log::debug!("key press     {:?}", k);
+
+                let is_unmod = Self::hack_windows_alt_menus_insert_ctrl_matches(self.unmodded_mods, k, cur_keys);
+
+                if is_unmod {
+                    log::error!("key press {:?}", KeyCode::LCtrl);
+                    if let Err(e) = press_key(&mut self.kbd_out, KeyCode::LCtrl.into()) {
+                        bail!("failed to press key: {:?}", e);
+                    }
+                }
+
                 if let Err(e) = press_key(&mut self.kbd_out, k.into()) {
                     bail!("failed to press key: {:?}", e);
+                }
+
+                if is_unmod {
+                    log::error!("key release {:?}", KeyCode::LCtrl);
+                    if let Err(e) = release_key(&mut self.kbd_out, KeyCode::LCtrl.into()) {
+                        bail!("failed to release key: {:?}", e);
+                    };
                 }
             }
         }

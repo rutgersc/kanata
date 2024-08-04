@@ -131,6 +131,8 @@ pub struct CfgOptions {
     pub macos_dev_names_include: Option<Vec<String>>,
     #[cfg(all(any(target_os = "windows", target_os = "unknown"), feature = "gui"))]
     pub gui_opts: CfgOptionsGui,
+    #[cfg(any(target_os = "windows", target_os = "unknown"))]
+    pub windows_suppress_menus_on_unmod_alt: bool,
 }
 
 impl Default for CfgOptions {
@@ -167,6 +169,8 @@ impl Default for CfgOptions {
             macos_dev_names_include: None,
             #[cfg(all(any(target_os = "windows", target_os = "unknown"), feature = "gui"))]
             gui_opts: Default::default(),
+            #[cfg(any(target_os = "windows", target_os = "unknown"))]
+            windows_suppress_menus_on_unmod_alt: false,
         }
     }
 }
@@ -665,6 +669,9 @@ pub fn parse_defcfg(expr: &[SExpr]) -> Result<CfgOptions> {
                     }
                     "rapid-event-delay" => {
                         cfg.rapid_event_delay = parse_cfg_val_u16(val, label, false)?
+                    }
+                    "windows_suppress_menus_on_unmod_alt" => {
+                        cfg.windows_suppress_menus_on_unmod_alt = parse_defcfg_val_bool(val, label)?
                     }
                     "transparent-key-resolution" => {
                         let v = sexpr_to_str_or_err(val, label)?;

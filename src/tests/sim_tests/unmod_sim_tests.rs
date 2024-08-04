@@ -43,6 +43,60 @@ fn unmod_keys_functionality_works() {
 }
 
 #[test]
+fn unmod_alt_presses_ctrl_after_alt_to_prevent_menus_on_windows() {
+    println!("unmod_keys_functionality_works");
+
+    let result = simulate(
+        "
+         (defcfg)
+         (defsrc f1 1 2)
+         (deflayer base
+             (multi lalt ralt)
+             (unmod (lalt) h)
+             (unmod (ralt) h)
+         )
+        ",
+        "d:f1 t:5 d:1 u:1 t:5 d:2 u:2 t:5",
+    )
+    .no_time()
+    .to_ascii();
+    assert_eq!(
+        "dn:LAlt dn:RAlt \
+         up:LAlt dn:LCtrl up:LCtrl dn:H up:H dn:LCtrl dn:LAlt up:LCtrl \
+         up:RAlt dn:LCtrl up:LCtrl dn:H up:H dn:LCtrl dn:RAlt up:LCtrl",
+        result
+    );
+}
+
+#[test]
+fn unmod_alt_presses_ctrl_after_alt_to_prevent_menus_on_windows_except_on_ctrl() {
+    println!("unmod_keys_functionality_works");
+
+    let result = simulate(
+        "
+         (defcfg)
+         (defsrc f1 1 2)
+         (deflayer base
+             (multi lalt ralt)
+             (unmod (lalt) h)
+             (unmod (ralt) h)
+         )
+        ",
+        "d:f1 t:5 d:1 u:1 t:5 d:2 u:2 t:5",
+    )
+    .no_time()
+    .to_ascii();
+    assert_eq!(
+        "dn:LAlt dn:RAlt \
+         up:LAlt dn:LCtrl up:LCtrl dn:H up:H dn:LCtrl dn:LAlt up:LCtrl \
+         up:RAlt dn:LCtrl up:LCtrl dn:H up:H dn:LCtrl dn:RAlt up:LCtrl",
+        result
+    );
+}
+
+
+
+#[test]
 #[should_panic]
 fn unmod_keys_mod_list_cannot_be_empty() {
     simulate(
