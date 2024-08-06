@@ -43,6 +43,29 @@ fn unmod_keys_functionality_works() {
 }
 
 #[test]
+fn unmod_allows_modded_keys() {
+    let result = simulate(
+        "
+         (defcfg)
+         (defsrc f1 1)
+         (deflayer base
+             (multi lalt)
+             (unmod S-[)
+         )
+        ",
+        "d:f1 t:5 d:1 u:1 t:5",
+    )
+    .no_time()
+    .to_ascii();
+    assert_eq!(
+        "dn:LAlt \
+         up:LAlt dn:LShift dn:H up:H up:LShift dn:LAlt",
+        result
+    );
+}
+
+
+#[test]
 #[should_panic]
 fn unmod_keys_mod_list_cannot_be_empty() {
     simulate(
