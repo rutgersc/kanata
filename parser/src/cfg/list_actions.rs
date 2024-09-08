@@ -101,6 +101,7 @@ pub const DYNAMIC_MACRO_RECORD_STOP_TRUNCATE: &str = "dynamic-macro-record-stop-
 pub const SWITCH: &str = "switch";
 pub const SEQUENCE: &str = "sequence";
 pub const UNMOD: &str = "unmod";
+pub const UNALT : &str = "unalt";
 pub const UNSHIFT: &str = "unshift";
 pub const UNSHIFT_A: &str = "un⇧";
 pub const LIVE_RELOAD_NUM: &str = "lrld-num";
@@ -212,6 +213,7 @@ pub fn is_list_action(ac: &str) -> bool {
         SWITCH,
         SEQUENCE,
         UNMOD,
+        UNALT,
         UNSHIFT,
         UNSHIFT_A,
         LIVE_RELOAD_NUM,
