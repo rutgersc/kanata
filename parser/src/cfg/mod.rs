@@ -1666,6 +1666,7 @@ fn parse_action_list(ac: &[SExpr], s: &ParserState) -> Result<&'static KanataAct
         SEQUENCE => parse_sequence_start(&ac[1..], s),
         SEQUENCE_NOERASE => parse_sequence_noerase(&ac[1..], s),
         UNMOD => parse_unmod(UNMOD, &ac[1..], s),
+        UNALT => parse_unmod(UNALT, &ac[1..], s),
         UNSHIFT | UNSHIFT_A => parse_unmod(UNSHIFT, &ac[1..], s),
         LIVE_RELOAD_NUM => parse_live_reload_num(&ac[1..], s),
         LIVE_RELOAD_FILE => parse_live_reload_file(&ac[1..], s),
