@@ -1055,7 +1055,7 @@ impl Kanata {
         //
         // Given that there appears to be no practical negative consequences for this bug
         // remaining.
-        log::trace!("{:?}", &self.prev_keys);
+        log::trace!("prev {:?}", &self.prev_keys);
         for k in &self.prev_keys {
             if cur_keys.contains(k) {
                 continue;
@@ -1100,7 +1100,7 @@ impl Kanata {
 
         // Press keys that exist in the current state but are missing from the previous state.
         // Comment above regarding Vec/HashSet also applies here.
-        log::trace!("{cur_keys:?}");
+        log::trace!("curr {cur_keys:?}");
         for k in cur_keys.iter() {
             if self.prev_keys.contains(k) {
                 // log::trace!("{k:?} is old press");
