@@ -53,6 +53,7 @@ simplelog = "0.12.0"
 serde_json = { version = "1", features = ["std"], default-features = false, optional = true }
 time = "0.3.36"
 web-time = "1.1.0"
+notify-rust = "4.11.3"
 
 kanata-keyberon = { path = "keyberon", version = "0.190.0" }
 kanata-parser =   { path = "parser", version = "0.190.0" }
@@ -87,6 +88,7 @@ winapi = { version = "0.3.9", features = [
     "winuser",
     "windef",
     "minwindef",
+    "consoleapi"
 ] }
 windows-sys = { version = "0.52.0", features = [
     "Win32_Devices_DeviceAndDriverInstallation",
