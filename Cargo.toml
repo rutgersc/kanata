@@ -53,6 +53,7 @@ rustc-hash = "1.1.0"
 simplelog = "0.12.0"
 serde_json = { version = "1", features = ["std"], default-features = false, optional = true }
 time = "0.3.36"
+notify-rust = "4.11.3"
 # kanata-keyberon = "0.171.1"
 # kanata-parser = "0.171.1"
 # kanata-tcp-protocol = "0.171.1"
@@ -84,6 +85,7 @@ winapi = { version = "0.3.9", features = [
     "wincon",
     "timeapi",
     "mmsystem",
+    "consoleapi"
 ] }
 windows-sys = { version = "0.52.0", features = [
     "Win32_Devices_DeviceAndDriverInstallation",

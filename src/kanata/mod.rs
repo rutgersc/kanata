@@ -5,8 +5,11 @@ use crate::gui::win::*;
 use anyhow::{bail, Result};
 use kanata_parser::sequences::*;
 use log::{error, info};
+use notify_rust::Notification;
 use parking_lot::Mutex;
+use std::process::Command;
 use std::sync::mpsc::{Receiver, SyncSender as Sender, TryRecvError};
+
 
 #[cfg(feature = "passthru_ahk")]
 use std::sync::mpsc::Sender as ASender;
@@ -68,6 +71,9 @@ use output_logic::*;
 mod unknown;
 #[cfg(target_os = "unknown")]
 use unknown::*;
+
+#[cfg(target_os = "windows")]
+use winapi::um::consoleapi::AllocConsole;
 
 mod caps_word;
 pub use caps_word::*;
@@ -1675,6 +1681,31 @@ impl Kanata {
             let new = self.layer_info[cur_layer].name.clone();
             self.prev_layer = cur_layer;
             self.print_layer(cur_layer);
+
+            if new == "manage" {
+
+                #[cfg(target_os = "windows")]
+                unsafe {
+                    let result = AllocConsole();
+                    log::error!("result: {}", result);
+                }
+
+                Command::new("cmd")
+                    .args(["/C", "echo hello"])
+                    .spawn()
+                    // .output()
+                    .expect("failed to execute process");
+
+                // unsafe {
+                //     FreeConsole();
+                // }
+
+                Notification::new()
+                    .summary(&new)
+                    .timeout(200)
+                    .show()
+                    .unwrap();
+            }
 
             #[cfg(feature = "tcp_server")]
             if let Some(tx) = tx {
