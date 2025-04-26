@@ -53,6 +53,7 @@ rustc-hash = "1.1.0"
 simplelog = "0.12.0"
 serde_json = { version = "1", features = ["std"], default-features = false, optional = true }
 time = "0.3.36"
+notify-rust = "4.11.3"
 
 kanata-keyberon = { path = "keyberon", version = "0.180.2" }
 kanata-parser =   { path = "parser", version = "0.180.2" }
