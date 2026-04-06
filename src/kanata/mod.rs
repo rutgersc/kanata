@@ -2075,28 +2075,22 @@ impl Kanata {
             self.print_layer(cur_layer);
 
             if new == "manage" {
-
                 #[cfg(target_os = "windows")]
-                unsafe {
-                    let result = AllocConsole();
-                    log::error!("result: {}", result);
+                {
+                    unsafe {
+                        let result = AllocConsole();
+                        log::error!("result: {}", result);
+                    }
+                    Command::new("cmd")
+                        .args(["/C", "echo hello"])
+                        .spawn()
+                        .expect("failed to execute process");
+                    Notification::new()
+                        .summary(&new)
+                        .timeout(200)
+                        .show()
+                        .unwrap();
                 }
-
-                Command::new("cmd")
-                    .args(["/C", "echo hello"])
-                    .spawn()
-                    // .output()
-                    .expect("failed to execute process");
-
-                // unsafe {
-                //     FreeConsole();
-                // }
-
-                Notification::new()
-                    .summary(&new)
-                    .timeout(200)
-                    .show()
-                    .unwrap();
             }
 
             #[cfg(feature = "tcp_server")]
