@@ -167,6 +167,12 @@ pub struct Kanata {
     #[cfg(target_os = "macos")]
     /// Tracks the last focused app name for deduplication in app focus detection.
     last_focused_app: String,
+    #[cfg(target_os = "macos")]
+    /// App names that should receive raw Ctrl (no Ctrl→Cmd swap).
+    app_terminal_list: Option<Vec<String>>,
+    #[cfg(target_os = "macos")]
+    /// Coordinate of the auto-injected gui-app virtual key (FAKE_KEY_ROW, index).
+    gui_app_vkey_idx: Option<u16>,
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     /// Tracks the Linux/Macos user configuration for device names (instead of paths) that should be
     /// included for interception and processing by kanata.
@@ -391,6 +397,10 @@ impl Kanata {
             #[cfg(target_os = "macos")]
             last_focused_app: String::new(),
             #[cfg(target_os = "macos")]
+            gui_app_vkey_idx: cfg.fake_keys.get("gui-app").map(|idx| *idx as u16),
+            #[cfg(target_os = "macos")]
+            app_terminal_list: cfg.options.macos_opts.app_terminal_list.clone(),
+            #[cfg(target_os = "macos")]
             include_names: cfg.options.macos_opts.macos_dev_names_include,
             #[cfg(target_os = "macos")]
             exclude_names: cfg.options.macos_opts.macos_dev_names_exclude,
@@ -529,6 +539,10 @@ impl Kanata {
             #[cfg(target_os = "macos")]
             last_focused_app: String::new(),
             #[cfg(target_os = "macos")]
+            gui_app_vkey_idx: cfg.fake_keys.get("gui-app").map(|idx| *idx as u16),
+            #[cfg(target_os = "macos")]
+            app_terminal_list: cfg.options.macos_opts.app_terminal_list.clone(),
+            #[cfg(target_os = "macos")]
             include_names: cfg.options.macos_opts.macos_dev_names_include,
             #[cfg(target_os = "macos")]
             exclude_names: cfg.options.macos_opts.macos_dev_names_exclude,
@@ -641,6 +655,11 @@ impl Kanata {
             delay: cfg.options.dynamic_macro_replay_delay_behaviour,
         };
         self.switch_max_key_timing = cfg.switch_max_key_timing;
+        #[cfg(target_os = "macos")]
+        {
+            self.gui_app_vkey_idx = cfg.fake_keys.get("gui-app").map(|idx| *idx as u16);
+            self.app_terminal_list = cfg.options.macos_opts.app_terminal_list.clone();
+        }
         #[cfg(feature = "tcp_server")]
         {
             self.virtual_keys = cfg.fake_keys;
@@ -754,7 +773,7 @@ impl Kanata {
             }
             KeyValue::WakeUp => {
                 #[cfg(target_os = "macos")]
-                app_focus::check_app_focus_change(&mut self.last_focused_app);
+                self.handle_app_focus_change();
                 return Ok(());
             }
         };
@@ -1963,6 +1982,36 @@ impl Kanata {
     #[cfg(target_os = "macos")]
     pub fn start_app_focus_listener_on_main(wakeup_tx: std::sync::mpsc::SyncSender<KeyEvent>) {
         app_focus::start_app_focus_listener_on_main(wakeup_tx);
+    }
+
+    #[cfg(target_os = "macos")]
+    fn handle_app_focus_change(&mut self) {
+        use kanata_parser::cfg::FAKE_KEY_ROW;
+
+        let Some(new_app) = app_focus::get_focused_app() else {
+            return;
+        };
+        if new_app == self.last_focused_app {
+            return;
+        }
+        log::info!("focused app changed: {new_app}");
+        self.last_focused_app.clone_from(&new_app);
+
+        let (Some(terminal_list), Some(vkey_idx)) =
+            (&self.app_terminal_list, self.gui_app_vkey_idx)
+        else {
+            return;
+        };
+
+        let is_terminal = terminal_list.iter().any(|t| new_app.contains(t.as_str()));
+        let layout = self.layout.bm();
+        if is_terminal {
+            log::info!("terminal app detected, releasing gui-app vkey");
+            layout.event(Event::Release(FAKE_KEY_ROW, vkey_idx));
+        } else {
+            log::info!("gui app detected, pressing gui-app vkey");
+            layout.event(Event::Press(FAKE_KEY_ROW, vkey_idx));
+        }
     }
 
     /// Starts a new thread that processes OS key events and advances the keyberon layout's state.

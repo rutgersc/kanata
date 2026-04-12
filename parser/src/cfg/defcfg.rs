@@ -66,6 +66,7 @@ pub enum LinuxCfgOutputBusType {
 pub struct CfgMacosOptions {
     pub macos_dev_names_include: Option<Vec<String>>,
     pub macos_dev_names_exclude: Option<Vec<String>>,
+    pub app_terminal_list: Option<Vec<String>>,
 }
 
 #[cfg(any(
@@ -585,6 +586,16 @@ pub fn parse_defcfg(expr: &[SExpr]) -> Result<CfgOptions> {
                                 log::warn!("macos-dev-names-exclude is empty");
                             }
                             cfg.macos_opts.macos_dev_names_exclude = Some(dev_names);
+                        }
+                    }
+                    "app-terminal-list" => {
+                        #[cfg(any(target_os = "macos", target_os = "unknown"))]
+                        {
+                            let app_names = parse_dev(val)?;
+                            if app_names.is_empty() {
+                                log::warn!("app-terminal-list is empty");
+                            }
+                            cfg.macos_opts.app_terminal_list = Some(app_names);
                         }
                     }
                     "tray-icon" => {
