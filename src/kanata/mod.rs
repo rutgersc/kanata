@@ -68,6 +68,9 @@ mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
 
+#[cfg(target_os = "macos")]
+mod app_focus;
+
 mod output_logic;
 use output_logic::*;
 
@@ -167,6 +170,9 @@ pub struct Kanata {
     #[cfg(target_os = "linux")]
     /// Tracks the Linux user configuration to continue or abort if no devices are found.
     continue_if_no_devices: bool,
+    #[cfg(target_os = "macos")]
+    /// Tracks the last focused app name for deduplication in app focus detection.
+    last_focused_app: String,
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     /// Tracks the Linux/Macos user configuration for device names (instead of paths) that should be
     /// included for interception and processing by kanata.
@@ -415,6 +421,8 @@ impl Kanata {
             overrides: cfg.overrides,
             override_states: OverrideStates::new(),
             #[cfg(target_os = "macos")]
+            last_focused_app: String::new(),
+            #[cfg(target_os = "macos")]
             include_names: cfg.options.macos_opts.macos_dev_names_include,
             #[cfg(target_os = "macos")]
             exclude_names: cfg.options.macos_opts.macos_dev_names_exclude,
@@ -562,6 +570,8 @@ impl Kanata {
             live_reload_requested: false,
             overrides: cfg.overrides,
             override_states: OverrideStates::new(),
+            #[cfg(target_os = "macos")]
+            last_focused_app: String::new(),
             #[cfg(target_os = "macos")]
             include_names: cfg.options.macos_opts.macos_dev_names_include,
             #[cfg(target_os = "macos")]
@@ -813,6 +823,8 @@ impl Kanata {
                 return Ok(());
             }
             KeyValue::WakeUp => {
+                #[cfg(target_os = "macos")]
+                app_focus::check_app_focus_change(&mut self.last_focused_app);
                 return Ok(());
             }
         };
@@ -2135,6 +2147,11 @@ impl Kanata {
         _rx: Receiver<ServerMessage>,
         _clients: crate::tcp_server::Connections,
     ) {
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn start_app_focus_listener_on_main(wakeup_tx: std::sync::mpsc::SyncSender<KeyEvent>) {
+        app_focus::start_app_focus_listener_on_main(wakeup_tx);
     }
 
     /// Starts a new thread that processes OS key events and advances the keyberon layout's state.

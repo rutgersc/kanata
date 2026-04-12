@@ -828,7 +828,10 @@ pub fn parse_defcfg(expr: &[SExpr]) -> Result<CfgOptions> {
                         cfg.rapid_event_delay = parse_cfg_val_u16(val, label, false)?
                     }
                     "windows_suppress_menus_on_unmod_alt" => {
-                        cfg.windows_suppress_menus_on_unmod_alt = parse_defcfg_val_bool(val, label)?
+                        #[cfg(any(target_os = "windows", target_os = "unknown"))]
+                        {
+                            cfg.windows_suppress_menus_on_unmod_alt = parse_defcfg_val_bool(val, label)?
+                        }
                     }
                     "transparent-key-resolution" => {
                         let v = sexpr_to_str_or_err(val, label)?;
