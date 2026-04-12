@@ -106,12 +106,12 @@ pub(super) fn start_app_focus_listener_on_main(wakeup_tx: SyncSender<KeyEvent>) 
     }
 }
 
-pub(super) fn check_app_focus_change(last_app: &mut String) {
-    if let Some(focused) = FOCUSED_APP.get() {
-        let current = focused.lock();
-        if !current.is_empty() && *current != *last_app {
-            info!("focused app changed: {current}");
-            *last_app = current.clone();
-        }
+pub(super) fn get_focused_app() -> Option<String> {
+    let focused = FOCUSED_APP.get()?;
+    let current = focused.lock();
+    if current.is_empty() {
+        None
+    } else {
+        Some(current.clone())
     }
 }
