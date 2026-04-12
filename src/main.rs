@@ -234,6 +234,28 @@ mod cli {
         #[cfg(target_os = "linux")]
         sd_notify::notify(true, &[sd_notify::NotifyState::Ready])?;
 
+        // On macOS, the event loop (wait_key) runs on a background thread so the
+        // main thread can run CFRunLoop — required for NSWorkspace notifications
+        // (app focus detection). On other platforms, event_loop blocks the main thread.
+        #[cfg(target_os = "macos")]
+        {
+            let wakeup_tx = tx.clone();
+            let kanata_clone = kanata_arc.clone();
+            std::thread::Builder::new()
+                .name("event-loop".into())
+                .spawn(move || {
+                    if let Err(e) = Kanata::event_loop(kanata_clone, tx) {
+                        panic!("event loop error: {e:?}");
+                    }
+                })
+                .expect("failed to spawn event loop thread");
+
+            // Blocks forever — runs CFRunLoop on main thread for NSWorkspace notifications.
+            Kanata::start_app_focus_listener_on_main(wakeup_tx);
+            Ok(())
+        }
+
+        #[cfg(not(target_os = "macos"))]
         Kanata::event_loop(kanata_arc, tx)
     }
 }

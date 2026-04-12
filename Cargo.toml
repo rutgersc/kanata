@@ -65,6 +65,7 @@ arboard = "3.4"
 [target.'cfg(target_os = "macos")'.dependencies]
 karabiner-driverkit = "0.1.5"
 objc = "0.2.7"
+block = "0.1"
 core-graphics = "0.24.0"
 open = { version = "5", optional = true }
 libc = "0.2"
