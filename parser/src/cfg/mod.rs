@@ -801,15 +801,10 @@ pub fn parse_cfg_raw_string(
         .collect::<Vec<_>>();
     parse_virtual_keys(&vkeys_exprs, s)?;
 
-    // Auto-inject gui-app virtual key when app-terminal-list is configured.
+    // Validate that gui-app virtual key exists when app-terminal-list is configured.
     #[cfg(any(target_os = "macos", target_os = "unknown"))]
-    if cfg.macos_opts.app_terminal_list.is_some() {
-        let idx = s.virtual_keys.len();
-        let action = s.a.sref(Action::NoOp);
-        if s.virtual_keys.insert("gui-app".to_string(), (idx, action)).is_some() {
-            bail!("Virtual key 'gui-app' is reserved for app-terminal-list and cannot be user-defined");
-        }
-        log::info!("auto-injected gui-app virtual key at index {idx}");
+    if cfg.macos_opts.app_terminal_list.is_some() && !s.virtual_keys.contains_key("gui-app") {
+        bail!("app-terminal-list requires a virtual key named 'gui-app'.\nAdd to your config: (defvirtualkeys gui-app nop)");
     }
 
     let sequence_exprs = root_exprs
