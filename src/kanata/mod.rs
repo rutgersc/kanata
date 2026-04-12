@@ -16,7 +16,7 @@ use std::sync::mpsc::Sender as ASender;
 
 use kanata_keyberon::action::ReleasableState;
 use kanata_keyberon::key_code::*;
-use kanata_keyberon::layout::{CustomEvent, Event, Layout, State};
+use kanata_keyberon::layout::{CustomEvent, Event, Layout, NormalKeyFlags, State};
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -1171,7 +1171,7 @@ impl Kanata {
         let custom_event = layout.tick();
         let mut live_reload_requested = false;
         let cur_keys = &mut self.cur_keys;
-        cur_keys.extend(layout.keycodes());
+        cur_keys.extend(layout.keycodes().filter(|k| *k != KeyCode::No));
         let mut reverse_release_order = false;
 
         // Deal with unmodded. Unlike other custom actions, this should come before key presses and
@@ -2192,14 +2192,29 @@ impl Kanata {
             return;
         };
 
+        let coord = (FAKE_KEY_ROW, vkey_idx);
         let is_terminal = terminal_list.iter().any(|t| new_app.contains(t.as_str()));
         let layout = self.layout.bm();
+
         if is_terminal {
+            // Remove the gui-app state so switch conditions see it as released.
             log::info!("terminal app detected, releasing gui-app vkey");
-            layout.event(Event::Release(FAKE_KEY_ROW, vkey_idx));
+            layout.states.retain(|s| {
+                !matches!(s, State::NormalKey { coord: c, .. } if *c == coord)
+            });
         } else {
-            log::info!("gui app detected, pressing gui-app vkey");
-            layout.event(Event::Press(FAKE_KEY_ROW, vkey_idx));
+            // Add a NormalKey state so switch ((input virtual gui-app)) matches.
+            let already_pressed = layout.states.iter().any(|s| {
+                matches!(s, State::NormalKey { coord: c, .. } if *c == coord)
+            });
+            if !already_pressed {
+                log::info!("gui app detected, pressing gui-app vkey");
+                let _ = layout.states.push(State::NormalKey {
+                    coord,
+                    keycode: KeyCode::No,
+                    flags: NormalKeyFlags(0),
+                });
+            }
         }
     }
 
