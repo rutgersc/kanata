@@ -64,9 +64,10 @@ fn collect_and_sort_events(
 ))]
 use std::sync::mpsc::Sender as ASender;
 
-use kanata_keyberon::action::ReleasableState;
+use kanata_keyberon::action::{Action, ReleasableState};
 use kanata_keyberon::key_code::*;
 use kanata_keyberon::layout::{CustomEvent, Event, Layout, State};
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -390,6 +391,57 @@ use once_cell::sync::Lazy;
 
 pub(crate) static MAPPED_KEYS: Lazy<Mutex<cfg::MappedKeys>> =
     Lazy::new(|| Mutex::new(cfg::MappedKeys::default()));
+
+/// Mouse buttons left transparent by the active layer, as a bitmask.
+///
+/// The LLHOOK backend consumes every `defsrc` button and re-sends the mapped
+/// output via `SendInput`. When the mapping is transparent that output is the
+/// button itself, so one physical press reaches any hook installed ahead of
+/// kanata's twice: once as the real event, once as the replay. A consumer that
+/// toggles state per press then sees two toggles and nets out to zero —
+/// PowerToys FancyZones' zone overlay is one such consumer, and its overlay
+/// flashes instead of staying up. Passing these buttons through untouched
+/// leaves kanata's output identical while putting one event on the wire.
+///
+/// This is the LLHOOK equivalent of AutoHotkey's `~` hotkey prefix.
+pub(crate) static TRANSPARENT_MOUSE_BTNS: AtomicU8 = AtomicU8::new(0);
+
+/// Buttons whose press was passed through. Their release must be passed through
+/// as well, even if the active layer changed while the button was held, so that
+/// the engine never observes a release without its press.
+///
+/// Only the Windows LLHOOK backend reads this; allowed rather than `cfg`-gated so
+/// it does not have to track that backend's compilation predicate.
+#[allow(dead_code)]
+pub(crate) static PASSED_THROUGH_MOUSE_BTNS: AtomicU8 = AtomicU8::new(0);
+
+const MOUSE_BTN_OSCODES: [OsCode; 5] = [
+    OsCode::BTN_LEFT,
+    OsCode::BTN_RIGHT,
+    OsCode::BTN_MIDDLE,
+    OsCode::BTN_SIDE,
+    OsCode::BTN_EXTRA,
+];
+
+pub(crate) fn mouse_btn_mask_bit(osc: OsCode) -> Option<u8> {
+    MOUSE_BTN_OSCODES
+        .iter()
+        .position(|candidate| *candidate == osc)
+        .map(|idx| 1u8 << idx)
+}
+
+/// Recomputes [`TRANSPARENT_MOUSE_BTNS`] for the layer that is active now.
+/// Cheap enough to run on every layer change; the hook reads the result with a
+/// single relaxed load so it never has to touch the layout behind a lock.
+pub(crate) fn refresh_transparent_mouse_btns(layout: &cfg::BorrowedKLayout<'_>) {
+    let layer = &layout.layers[layout.current_layer()][0];
+    let mask = MOUSE_BTN_OSCODES
+        .iter()
+        .filter(|osc| matches!(layer.get(usize::from(u16::from(**osc))), Some(Action::Trans)))
+        .filter_map(|osc| mouse_btn_mask_bit(*osc))
+        .fold(0u8, |acc, bit| acc | bit);
+    TRANSPARENT_MOUSE_BTNS.store(mask, Ordering::Relaxed);
+}
 
 const LINUX_PERMISSIONS_ERROR: &str = "Failed to open the output uinput device. Make sure you added the user executing kanata to the 'uinput' group and that the 'uinput' group is configured correctly.\nSee for more detail: https://github.com/jtroo/kanata/blob/main/docs/setup-linux.md";
 
@@ -754,6 +806,7 @@ impl Kanata {
         self.sequence_input_mode = cfg.options.sequence_input_mode;
         self.sequence_timeout = cfg.options.sequence_timeout;
         self.layout = cfg.layout;
+        refresh_transparent_mouse_btns(self.layout.b());
         self.key_outputs = cfg.key_outputs;
         self.layer_info = cfg.layer_info;
         self.sequences = cfg.sequences;
@@ -2158,6 +2211,7 @@ impl Kanata {
         if cur_layer != self.prev_layer {
             let new = self.layer_info[cur_layer].name.clone();
             self.prev_layer = cur_layer;
+            refresh_transparent_mouse_btns(self.layout.b());
             self.print_layer(cur_layer);
 
             if new == "manage" {
@@ -2317,6 +2371,7 @@ impl Kanata {
             let mut ms_elapsed = 0;
 
             info!("Starting kanata proper");
+            refresh_transparent_mouse_btns(kanata.lock().layout.b());
 
             #[cfg(not(feature = "passthru_ahk"))]
             info!(
