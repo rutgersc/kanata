@@ -107,6 +107,31 @@ impl Kanata {
                 if !MAPPED_KEYS.lock().contains(&oscode) {
                     return false;
                 }
+                // A transparent mapping would have kanata re-send this very button, making the
+                // press visible twice to hooks that run ahead of this one. Hand it back to the OS
+                // untouched instead; the output is identical and only one event reaches the chain.
+                if let Some(bit) = mouse_btn_mask_bit(oscode) {
+                    let passthrough = match key_event.value {
+                        KeyValue::Press => {
+                            let transparent =
+                                TRANSPARENT_MOUSE_BTNS.load(Ordering::Relaxed) & bit != 0;
+                            if transparent {
+                                PASSED_THROUGH_MOUSE_BTNS.fetch_or(bit, Ordering::Relaxed);
+                            }
+                            transparent
+                        }
+                        // Always release what was passed through, even if the layer has since
+                        // changed, so the engine never sees a release without its press.
+                        KeyValue::Release => {
+                            PASSED_THROUGH_MOUSE_BTNS.fetch_and(!bit, Ordering::Relaxed) & bit != 0
+                        }
+                        _ => false,
+                    };
+                    if passthrough {
+                        log::debug!("mouse passthrough (transparent): {:?}", key_event);
+                        return false;
+                    }
+                }
                 log::debug!("event loop - mouse: {:?}", key_event);
                 try_send_panic(&preprocess_tx, key_event);
                 true
