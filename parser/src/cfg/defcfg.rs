@@ -1166,8 +1166,8 @@ pub enum AltGrBehaviour {
 #[cfg(any(target_os = "windows", target_os = "unknown"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WinSyncKeystateBehaviour {
-    WinSyncDoNothing,
     #[default]
+    WinSyncDoNothing,
     WinSyncClearKanataStates,
     WinSyncClearKanataAndOsStates,
 }
